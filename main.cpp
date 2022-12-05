@@ -1,5 +1,4 @@
-﻿
-#include <iostream>
+﻿#include <iostream>
 #include <map>
 #include <queue>
 
@@ -73,13 +72,34 @@ void getCodes(Node *tree, std::map<char, std::string> *codes,std::string cd) {
 
 }
 
+void printCodes(std::map<char, std::string> codes) {
+	for (const auto& [key, value] : codes)
+	{
+		std::cout << static_cast<int>( key) << ": " << value << '\n';
+	}
+}
+
+//testing function
+int calcBitLength(std::map<char, std::string> codes, std::map<char, int> occur) {
+	int sum = 0;
+
+	for (const auto& [key, value] : codes)
+	{
+		sum += static_cast<unsigned int>(value.size()) * occur[key];
+	}
+
+	return sum;
+
+}
+
 //int main(int argc, char* argv[])
 int main()
 {
 
 	
 	std::priority_queue<Node> pq;
-	for (const auto& [key, value] : findOccurancies("aaabcdeeeeeeeeddddddd"))
+	std::map<char, int> occurencies = findOccurancies("man coding uses a variable length code for each of the elements within the data. This normally involves analyzing the data to determine the probability of its elements. The most probable elements are coded with a few bits and the least probable coded with a greater number of bits. This could be done on a character-by-character basis, in a text file, or could be achieved on a byte-by-byte basis for ot");
+	for (const auto& [key, value] : occurencies)
 	{
 		pq.push(Node{ value, key });
 	}
@@ -107,10 +127,12 @@ int main()
 
 	printBT("", &tree, false);
 
-
 	std::map<char, std::string> codes;
-	getCodes( &tree, &codes, " ");
+	getCodes( &tree, &codes, "");
+	
+	printCodes(codes);
 
+	std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
 	return 0;
 
 }
