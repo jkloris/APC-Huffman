@@ -100,7 +100,7 @@ void printCodes(std::map<unsigned char, std::string> codes) {
 
 	for (const auto& [key, value] : codes)
 	{
-		std::cout << static_cast<int>( key) << ": " << value << '\n';
+		std::cout << static_cast<int>( key) << " " << key << ": " << value << '\n';
 	}
 }
 
@@ -161,8 +161,38 @@ void compressFile(std::map<unsigned char, std::string> codes, std::map<unsigned 
 		// manual break, because char cant be more than 255
 		if (c == 255) break;
 	}
-	std::cout << static_cast<unsigned char>(255) << '\n';
+	
+	std::ifstream infile(inpath, std::ios::binary);
+	if (!infile.is_open()) {
+		std::cout << "Unable to open file\n";
+		//return  {}; TODO
+	}
 
+
+	size_t i = INT_MAX, b = 0;
+	nonzeroSize = 0;
+	char c = 0;
+	std::string tmp = codes[c];
+	while (1) {
+		if (i >= codes[c].length()) {
+			if (!infile.read(&c, 1)) break;
+			i = 0;
+			tmp = codes[c];
+		}
+
+		nonzeroSize |= (codes[c][i] - '0') << (7 - b);
+		b++;
+		i++;
+		if (b == 8 ) {
+			outfile.write(&nonzeroSize, sizeof(char));
+			nonzeroSize = 0;
+			b = 0;
+		}
+		
+	}
+	outfile.write(&nonzeroSize, sizeof(char));
+
+	infile.close();
 	outfile.close();
 }
 
@@ -172,7 +202,7 @@ int main()
 	// TODO args handling
 
 
-	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies("main.cpp");
+	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies("input.txt");
 	if (!optoccur)
 		return EXIT_FAILURE;
 	auto occurencies = *std::move(optoccur);
