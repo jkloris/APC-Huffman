@@ -1,12 +1,14 @@
 ﻿#include <iostream>
+#include <fstream>
 #include <map>
+#include <optional>
 #include <queue>
 
 
 struct Node
 {
 	int value;
-	char c;
+	unsigned char c;
 	struct Node* left;
 	struct Node* right;
 
@@ -22,7 +24,7 @@ bool operator<(const Node& lhs, const Node& rhs)
 
 
 
-//_____________________________
+//_____________________________tmp test print
 void printBT(const std::string& prefix, const Node* node, bool isLeft)
 {
 	if (node != nullptr)
@@ -44,21 +46,41 @@ void printBT(const std::string& prefix, const Node* node, bool isLeft)
 
 //________________________
 
-std::map<char, int> findOccurancies(std::string str) {
-	std::map<char, int> occurancies = {};
-	
-	for (size_t i = 0; i < str.size(); i++) {
-		occurancies[str[i]]++;
-		
+
+
+
+std::optional<std::map<unsigned char, int>> findOccurancies(std::string inpath) {
+
+	std::ifstream inf(inpath, std::ios::binary);
+	if (!inf.is_open()) {
+		std::cout << "Unable to open file\n";
+		return  {};
 	}
 
+	std::streampos currPos = inf.tellg();
+	inf.seekg(0, std::ios::end);
+	if (inf.tellg() == currPos) {
+		std::cout << "Empty file\n";
+		return {};
+	}
+	inf.seekg(0, 0);
+
+	std::map<unsigned char, int> occurancies = {};
+	char c;
+	while (inf.read(&c, 1)) {
+
+		occurancies[c]++;
+	}
+
+
+	inf.close();
 	return occurancies;
 
 }
 
-void getCodes(Node *tree, std::map<char, std::string> *codes,std::string cd) {
+void getCodes(Node *tree, std::map<unsigned char, std::string> *codes,std::string cd) {
 	if (tree->c != NULL) {
-		codes->insert(std::pair<char, std::string>(tree->c, cd));
+		codes->insert(std::pair<unsigned char, std::string>(tree->c, cd));
 		return;
 	}
 
@@ -72,15 +94,18 @@ void getCodes(Node *tree, std::map<char, std::string> *codes,std::string cd) {
 
 }
 
-void printCodes(std::map<char, std::string> codes) {
+
+void printCodes(std::map<unsigned char, std::string> codes) {
+
 	for (const auto& [key, value] : codes)
 	{
+		//x = static_cast<unsigned char>(key);
 		std::cout << static_cast<int>( key) << ": " << value << '\n';
 	}
 }
 
 //testing function
-int calcBitLength(std::map<char, std::string> codes, std::map<char, int> occur) {
+int calcBitLength(std::map<unsigned char, std::string> codes, std::map<unsigned char, int> occur) {
 	int sum = 0;
 
 	for (const auto& [key, value] : codes)
@@ -96,9 +121,13 @@ int calcBitLength(std::map<char, std::string> codes, std::map<char, int> occur) 
 int main()
 {
 
-	
+	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies("input.txt");
+	if (!optoccur)
+		return EXIT_FAILURE;
+	auto occurencies = *std::move(optoccur);
+
+
 	std::priority_queue<Node> pq;
-	std::map<char, int> occurencies = findOccurancies("man coding uses a variable length code for each of the elements within the data. This normally involves analyzing the data to determine the probability of its elements. The most probable elements are coded with a few bits and the least probable coded with a greater number of bits. This could be done on a character-by-character basis, in a text file, or could be achieved on a byte-by-byte basis for ot");
 	for (const auto& [key, value] : occurencies)
 	{
 		pq.push(Node{ value, key });
@@ -106,6 +135,7 @@ int main()
 
 	Node x;
 	
+	// build tree
 	while (pq.size() > 1) {
 		Node *l = new Node();
 		*l = pq.top();
@@ -125,9 +155,9 @@ int main()
 
 	Node tree = pq.top();
 
-	printBT("", &tree, false);
+	//printBT("", &tree, false);
 
-	std::map<char, std::string> codes;
+	std::map<unsigned char, std::string> codes;
 	getCodes( &tree, &codes, "");
 	
 	printCodes(codes);
