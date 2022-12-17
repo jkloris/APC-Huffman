@@ -2,6 +2,7 @@
 #include <fstream>
 #include <map>
 #include <optional>
+#include <string>
 #include <queue>
 
 
@@ -99,34 +100,85 @@ void printCodes(std::map<unsigned char, std::string> codes) {
 
 	for (const auto& [key, value] : codes)
 	{
-		//x = static_cast<unsigned char>(key);
 		std::cout << static_cast<int>( key) << ": " << value << '\n';
 	}
 }
 
-//testing function
-int calcBitLength(std::map<unsigned char, std::string> codes, std::map<unsigned char, int> occur) {
-	int sum = 0;
+uint64_t calcBitLength(std::map<unsigned char, std::string> codes, std::map<unsigned char, int> occur) {
+	uint64_t sum = 0;
 
 	for (const auto& [key, value] : codes)
 	{
-		sum += static_cast<unsigned int>(value.size()) * occur[key];
+		sum += (value.size()) * occur[key];
 	}
 
 	return sum;
 
 }
 
+std::vector< char> codeToBin(std::string strcode) {
+
+	std::vector< char> bytes;
+	char byte = 0;
+
+
+	
+	for (size_t i = 0; i < strcode.length(); ) {
+		byte = 0;
+		for (size_t b = 0; b < 8 && i < strcode.length(); b++, i++) {
+			byte |= (strcode[i]-'0') << (7 - b);
+		}
+		bytes.push_back(byte);
+	}
+
+	return bytes;
+}
+
+void compressFile(std::map<unsigned char, std::string> codes, std::map<unsigned char, int> occur, std::string inpath, std::string outpath) {
+	std::ofstream outfile(outpath, std::ios::binary);
+	
+
+	uint64_t size = calcBitLength(codes, occur);
+	outfile.write(reinterpret_cast<char*>(&size), sizeof(size));
+	
+	char zero = 0;
+	char nonzeroSize = 1;
+	std::vector< char> bytes = {  };
+
+	for (unsigned char c = 0; c < 256 ; c++) {
+		if( codes[c].length() == 0) {
+			outfile.write(reinterpret_cast<char*>(&zero), sizeof(c));
+		}
+		else {
+			nonzeroSize = static_cast<char> (codes[c].length());
+			outfile.write(&nonzeroSize, sizeof(c));
+			
+			bytes = codeToBin(codes[c]);
+			for (char b : bytes) {
+				outfile.write(&b, sizeof(b));
+			}
+		}
+		// manual break, because char cant be more than 255
+		if (c == 255) break;
+	}
+	std::cout << static_cast<unsigned char>(255) << '\n';
+
+	outfile.close();
+}
+
 //int main(int argc, char* argv[])
 int main()
 {
+	// TODO args handling
 
-	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies("input.txt");
+
+	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies("main.cpp");
 	if (!optoccur)
 		return EXIT_FAILURE;
 	auto occurencies = *std::move(optoccur);
 
 
+	// build tree--------
 	std::priority_queue<Node> pq;
 	for (const auto& [key, value] : occurencies)
 	{
@@ -135,7 +187,6 @@ int main()
 
 	Node x;
 	
-	// build tree
 	while (pq.size() > 1) {
 		Node *l = new Node();
 		*l = pq.top();
@@ -154,7 +205,7 @@ int main()
 	}
 
 	Node tree = pq.top();
-
+	//--------------
 	//printBT("", &tree, false);
 
 	std::map<unsigned char, std::string> codes;
@@ -163,6 +214,7 @@ int main()
 	printCodes(codes);
 
 	std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
+	compressFile(codes, occurencies, "input.txt", "output.txt");
 	return 0;
 
 }
