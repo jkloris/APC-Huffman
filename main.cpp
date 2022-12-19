@@ -23,6 +23,26 @@ bool operator<(const Node& lhs, const Node& rhs)
 
 }
 
+class ArgumentHandler {
+public:
+	std::string mod = {  };
+	std::string inputPath;
+	std::string outputPath;
+	
+	bool setArguments(int argc, char* argv[]) {
+		if (argc != 4)
+			return false;
+
+		mod = argv[1];
+		if (mod != "--print" && mod != "--compress" && mod != "--decompress")
+			return false;
+
+		inputPath = argv[2];
+		outputPath = argv[3];
+		return true;
+	}
+};
+
 
 
 //_____________________________tmp test print
@@ -196,13 +216,15 @@ void compressFile(std::map<unsigned char, std::string> codes, std::map<unsigned 
 	outfile.close();
 }
 
-//int main(int argc, char* argv[])
-int main()
+int main(int argc, char* argv[])
 {
 	// TODO args handling
+	ArgumentHandler arguments;
+	if (!arguments.setArguments(argc, argv))
+		return EXIT_FAILURE;
 
 
-	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies("input.txt");
+	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies(arguments.inputPath);
 	if (!optoccur)
 		return EXIT_FAILURE;
 	auto occurencies = *std::move(optoccur);
@@ -240,11 +262,14 @@ int main()
 
 	std::map<unsigned char, std::string> codes;
 	getCodes( &tree, &codes, "");
-	
-	printCodes(codes);
 
-	std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
-	compressFile(codes, occurencies, "input.txt", "output.txt");
+
+	if(arguments.mod == "--print")
+		printCodes(codes);
+	else if(arguments.mod == "--compress")
+		compressFile(codes, occurencies, arguments.inputPath, arguments.outputPath);
+
+	//std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
 	return 0;
 
 }
