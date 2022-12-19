@@ -29,6 +29,8 @@ public:
 	std::string inputPath;
 	std::string outputPath;
 	
+
+	// TODO mozno osetrit subor uz tu (vysputny sa zatial kontroluje len ak je --compress)
 	bool setArguments(int argc, char* argv[]) {
 		if (argc != 4)
 			return false;
@@ -106,11 +108,11 @@ void getCodes(Node *tree, std::map<unsigned char, std::string> *codes,std::strin
 	}
 
 	if (tree->left != NULL) {
-		getCodes(tree->left, codes, cd + '0');
+		getCodes(tree->left, codes, cd + '1');
 	}
 	
 	if (tree->right != NULL) {
-		getCodes(tree->right, codes, cd + '1');
+		getCodes(tree->right, codes, cd + '0');
 	}
 
 }
@@ -154,13 +156,16 @@ std::vector< char> codeToBin(std::string strcode) {
 	return bytes;
 }
 
-void compressFile(std::map<unsigned char, std::string> codes, std::map<unsigned char, int> occur, std::string inpath, std::string outpath) {
+bool compressFile(std::map<unsigned char, std::string> codes, std::map<unsigned char, int> occur, std::string inpath, std::string outpath) {
 	std::ofstream outfile(outpath, std::ios::binary);
 	
 
 	uint64_t size = calcBitLength(codes, occur);
 	outfile.write(reinterpret_cast<char*>(&size), sizeof(size));
-	
+
+	if (!outfile.is_open())
+		return false;
+
 	char zero = 0;
 	char nonzeroSize = 1;
 	std::vector< char> bytes = {  };
@@ -184,8 +189,8 @@ void compressFile(std::map<unsigned char, std::string> codes, std::map<unsigned 
 	
 	std::ifstream infile(inpath, std::ios::binary);
 	if (!infile.is_open()) {
-		std::cout << "Unable to open file\n";
-		//return  {}; TODO
+		std::cout << "Unable to open file\n"; // TODO del
+		return  false; 
 	}
 
 
@@ -214,11 +219,13 @@ void compressFile(std::map<unsigned char, std::string> codes, std::map<unsigned 
 
 	infile.close();
 	outfile.close();
+
+	return true;
 }
 
 int main(int argc, char* argv[])
 {
-	// TODO args handling
+
 	ArgumentHandler arguments;
 	if (!arguments.setArguments(argc, argv))
 		return EXIT_FAILURE;
@@ -264,10 +271,11 @@ int main(int argc, char* argv[])
 	getCodes( &tree, &codes, "");
 
 
-	if(arguments.mod == "--print")
+	if (arguments.mod == "--print")
 		printCodes(codes);
-	else if(arguments.mod == "--compress")
-		compressFile(codes, occurencies, arguments.inputPath, arguments.outputPath);
+	else if (arguments.mod == "--compress")
+		if (!compressFile(codes, occurencies, arguments.inputPath, arguments.outputPath))
+			return EXIT_FAILURE;
 
 	//std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
 	return 0;
