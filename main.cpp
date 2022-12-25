@@ -120,7 +120,7 @@ std::optional<std::map<unsigned char, int>> findOccurancies(std::string const &i
 }
 
 void getCodes(const Node *tree, std::map<unsigned char, std::string> *codes,std::string cd) {
-	if (tree->c != NULL) {
+	if (tree->left == NULL || tree->right == NULL) {
 		codes->insert(std::pair<unsigned char, std::string>(tree->c, cd));
 		return;
 	}
@@ -262,31 +262,32 @@ bool compressFile(std::map<unsigned char, std::string>  codes, std::map<unsigned
 	char buffer[8192];
 	std::streamsize bufferSize = std::size(buffer);
 	infile.read(buffer, bufferSize);
-	size_t buffi = 0, gc = infile.gcount(), bitbufSize = 192, writtenBitsLeft = size;
+	size_t buffi = 0, gc = infile.gcount(), bitbufSize = 8, writtenBitsLeft = size;
 	
-	char c = 0;
+	//char c = 0;
 	//uint64_t  b = 0;
 	std::string tmp = "";
+	tmp.reserve(bitbufSize + 256);
 
 	while (gc > 0) {
 		while (buffi < gc) {
 
 
-			c = buffer[buffi];
-			tmp += codes[c];
+			tmp += codes[buffer[buffi]];
 			
-			if (tmp.size() >= 8 && writtenBitsLeft < bitbufSize) {
-				std::bitset<8> bits(tmp.substr(0, 8));
-				outfile.write(reinterpret_cast<char*>(&bits), 1);
-				tmp.erase(0, 8);
-				writtenBitsLeft -= 8;
-			}
-			else if (tmp.size() >= bitbufSize) {
-					std::bitset<192> bits(tmp.substr(0, bitbufSize));
-					bits.flip();
-					outfile.write(reinterpret_cast<char*>(&bits), bitbufSize / 8);
-					tmp.erase(0, bitbufSize);
-					writtenBitsLeft -= bitbufSize;
+			//if (tmp.size() >= 8 && writtenBitsLeft < bitbufSize) {
+			//	std::bitset<8> bits(tmp.substr(0, 8));
+			//	outfile.write(reinterpret_cast<char*>(&bits), 1);
+			//	tmp.erase(0, 8);
+			//	writtenBitsLeft -= 8;
+			//}
+			if (tmp.size() >= bitbufSize) {
+				std::bitset<8> bits(tmp.substr(0, bitbufSize));
+		
+
+				outfile.write(reinterpret_cast<char*>(&bits), bitbufSize / 8);
+				tmp.erase(0, bitbufSize);
+				writtenBitsLeft -= bitbufSize;
 			}
 			buffi++;
 
@@ -409,7 +410,7 @@ int main(int argc, char* argv[])
 	}
 
 	Node tree = pq.top();
-	//--------------
+	//-------------- TODO free
 	//printBT("", &tree, false);
 
 	std::map<unsigned char, std::string> codes;
