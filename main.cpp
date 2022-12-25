@@ -175,7 +175,7 @@ std::vector< char> codeToBin(std::string strcode) {
 	return bytes;
 }
 
-bool compressFile(std::map<unsigned char, std::string>  codes, std::map<unsigned char, int> occur, std::string const &inpath, std::string const &outpath) {
+bool compressFile( std::map<unsigned char, std::string> &codes, std::map<unsigned char, int> occur, std::string const &inpath, std::string const &outpath) {
 	std::ofstream outfile(outpath, std::ios::binary);
 
 
@@ -216,79 +216,35 @@ bool compressFile(std::map<unsigned char, std::string>  codes, std::map<unsigned
 
 	std::cout << "compress\n";
 
-	//test 
-	//char buffer[65536];
-	//std::streamsize bufferSize = std::size(buffer);
-	////outfile.write(reinterpret_cast<char*>(&buffer), bufferSize);
-	//infile.read(buffer, bufferSize);
-	//size_t buffi = 0, gc = infile.gcount();
-
-	//char c = 0;
-	//size_t i = INT_MAX, b = 0;
-	//nonzeroSize = 0;
-	////std::string tmp = codes[c];
-	//while (gc > 0) {
-	//	while (buffi < gc) {
-	//		
-	//		
-	//		if (i >= codes[c].length()) {
-	//			c = buffer[buffi];
-	//			i = 0;
-	//			//tmp = codes[c];
-	//			buffi++;
-	//		}
-
-	//		nonzeroSize |= (codes[c][i] - '0') << (7 - b);
-	//		b++;
-	//		i++;
-	//		if (b == 8) {
-	//			outfile.write(&nonzeroSize, sizeof(char));
-	//			nonzeroSize = 0;
-	//			b = 0;
-	//		}
-	//	
-	//		
-	//	}
-	//	infile.read(buffer, bufferSize);
-	//	gc = infile.gcount();
-	//	buffi = 0;
-	//}
-	//outfile.write(&nonzeroSize, sizeof(char));
-	//----
-
-
-	//test  2
+	
 
 	char buffer[8192];
 	std::streamsize bufferSize = std::size(buffer);
 	infile.read(buffer, bufferSize);
-	size_t buffi = 0, gc = infile.gcount(), bitbufSize = 8, writtenBitsLeft = size;
-	
+	size_t buffi = 0, gc = infile.gcount(); //bitbufSize = 8, writtenBitsLeft = size
+	uint16_t bi = 0;
 	//char c = 0;
-	//uint64_t  b = 0;
-	std::string tmp = "";
-	tmp.reserve(bitbufSize + 256);
+	uint8_t  b8 = 0;
+	std::string code = "";
+	code.reserve(256);
+	char byte [9] = {'\0'};
 
 	while (gc > 0) {
 		while (buffi < gc) {
 
 
-			tmp += codes[buffer[buffi]];
-			
-			//if (tmp.size() >= 8 && writtenBitsLeft < bitbufSize) {
-			//	std::bitset<8> bits(tmp.substr(0, 8));
-			//	outfile.write(reinterpret_cast<char*>(&bits), 1);
-			//	tmp.erase(0, 8);
-			//	writtenBitsLeft -= 8;
-			//}
-			if (tmp.size() >= bitbufSize) {
-				std::bitset<8> bits(tmp.substr(0, bitbufSize));
-		
+			code = codes[buffer[buffi]]; //faster, pomale ale nevyhnutne
+			//tmp = codes.find(buffer[buffi])->second;
+			for (auto c : code) {
+				byte[bi++] = c;
 
-				outfile.write(reinterpret_cast<char*>(&bits), bitbufSize / 8);
-				tmp.erase(0, bitbufSize);
-				writtenBitsLeft -= bitbufSize;
+				if (bi >= 8) {
+					bi = 0;
+					b8 = static_cast<uint8_t>(std::stoi(byte, nullptr, 2)); //POMALE
+					outfile.write(reinterpret_cast<char*>(&b8), sizeof(char));
+				}
 			}
+
 			buffi++;
 
 		}
@@ -296,39 +252,16 @@ bool compressFile(std::map<unsigned char, std::string>  codes, std::map<unsigned
 		gc = infile.gcount();
 		buffi = 0;
 	}
+	for(size_t i = bi; i < 8; i++)
+		byte[i] = '0';
+
+	b8 = static_cast<uint8_t>(std::stoi(byte, nullptr, 2));
+	outfile.write(reinterpret_cast<char*>(&b8), sizeof(char));
 
 
-	while (tmp.size() > 0) {
-		std::bitset<8> bits(tmp.substr(0, 8));
-		outfile.write(reinterpret_cast<char*>(&bits), 1);
-		tmp.erase(0, 8);
-	}
 	//outfile.write(reinterpret_cast<char*>(&b), sizeof(b));
 	//
 
-
-	/*size_t i = INT_MAX, b = 0;
-	nonzeroSize = 0;
-	char c = 0;
-	std::string tmp = codes[c];
-	while (1) {
-		if (i >= codes[c].length()) {
-			if (!infile.read(&c, 1)) break;
-			i = 0;
-			tmp = codes[c];
-		}
-
-		nonzeroSize |= (codes[c][i] - '0') << (7 - b);
-		b++;
-		i++;
-		if (b == 8 ) {
-			outfile.write(&nonzeroSize, sizeof(char));
-			nonzeroSize = 0;
-			b = 0;
-		}
-		
-	}
-	outfile.write(&nonzeroSize, sizeof(char));*/
 
 	infile.close();
 	outfile.close();
