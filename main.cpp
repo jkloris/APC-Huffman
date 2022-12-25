@@ -4,7 +4,8 @@
 #include <optional>
 #include <string>
 #include <queue>
-#include <bitset>
+#include <unordered_map>
+
 
 struct Node
 {
@@ -119,7 +120,7 @@ std::optional<std::map<unsigned char, int>> findOccurancies(std::string const &i
 
 }
 
-void getCodes(const Node *tree, std::map<unsigned char, std::string> *codes,std::string cd) {
+void getCodes(const Node *tree, std::unordered_map<unsigned char, std::string> *codes,std::string cd) {
 	if (tree->left == NULL || tree->right == NULL) {
 		codes->insert(std::pair<unsigned char, std::string>(tree->c, cd));
 		return;
@@ -136,7 +137,7 @@ void getCodes(const Node *tree, std::map<unsigned char, std::string> *codes,std:
 }
 
 
-void printCodes(std::map<unsigned char, std::string> codes) {
+void printCodes(std::unordered_map<unsigned char, std::string> codes) {
 
 	for (const auto& [key, value] : codes)
 	{
@@ -145,7 +146,7 @@ void printCodes(std::map<unsigned char, std::string> codes) {
 	}
 }
 
-uint64_t calcBitLength(std::map<unsigned char, std::string> codes, std::map<unsigned char, int> occur) {
+uint64_t calcBitLength(std::unordered_map<unsigned char, std::string> codes, std::map<unsigned char, int> occur) {
 	uint64_t sum = 0;
 
 	for (const auto& [key, value] : codes)
@@ -175,7 +176,7 @@ std::vector< char> codeToBin(std::string strcode) {
 	return bytes;
 }
 
-bool compressFile( std::map<unsigned char, std::string> &codes, std::map<unsigned char, int> occur, std::string const &inpath, std::string const &outpath) {
+bool compressFile( std::unordered_map<unsigned char, std::string> &codes, std::map<unsigned char, int> occur, std::string const &inpath, std::string const &outpath) {
 	std::ofstream outfile(outpath, std::ios::binary);
 
 
@@ -214,34 +215,36 @@ bool compressFile( std::map<unsigned char, std::string> &codes, std::map<unsigne
 		return  false;
 	}
 
-	std::cout << "compress\n";
+	std::cout << "compress\n" << codes.size();;
 
 	
 
 	char buffer[8192];
 	std::streamsize bufferSize = std::size(buffer);
 	infile.read(buffer, bufferSize);
-	size_t buffi = 0, gc = infile.gcount(); //bitbufSize = 8, writtenBitsLeft = size
+	size_t buffi = 0, gc = infile.gcount(); 
+	
 	uint16_t bi = 0;
-	//char c = 0;
-	uint8_t  b8 = 0;
+	uint8_t  byte = 0;
+
 	std::string code = "";
 	code.reserve(256);
-	char byte [9] = {'\0'};
+	
 
 	while (gc > 0) {
 		while (buffi < gc) {
 
 
-			code = codes[buffer[buffi]]; //faster, pomale ale nevyhnutne
-			//tmp = codes.find(buffer[buffi])->second;
+			code = codes[buffer[buffi]]; 
+			
 			for (auto c : code) {
-				byte[bi++] = c;
+				byte |= (c - '0') << (7 - bi);
+				bi++;
 
 				if (bi >= 8) {
 					bi = 0;
-					b8 = static_cast<uint8_t>(std::stoi(byte, nullptr, 2)); //POMALE
-					outfile.write(reinterpret_cast<char*>(&b8), sizeof(char));
+					outfile.write(reinterpret_cast<char*>(&byte), sizeof(char));
+					byte = 0;
 				}
 			}
 
@@ -252,15 +255,8 @@ bool compressFile( std::map<unsigned char, std::string> &codes, std::map<unsigne
 		gc = infile.gcount();
 		buffi = 0;
 	}
-	for(size_t i = bi; i < 8; i++)
-		byte[i] = '0';
 
-	b8 = static_cast<uint8_t>(std::stoi(byte, nullptr, 2));
-	outfile.write(reinterpret_cast<char*>(&b8), sizeof(char));
-
-
-	//outfile.write(reinterpret_cast<char*>(&b), sizeof(b));
-	//
+	outfile.write(reinterpret_cast<char*>(&byte), sizeof(char));
 
 
 	infile.close();
@@ -346,7 +342,7 @@ int main(int argc, char* argv[])
 	//-------------- TODO free
 	//printBT("", &tree, false);
 
-	std::map<unsigned char, std::string> codes;
+	std::unordered_map<unsigned char, std::string> codes;
 	getCodes( &tree, &codes, "");
 
 
