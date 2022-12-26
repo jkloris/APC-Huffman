@@ -73,7 +73,7 @@ void printBT(const std::string& prefix, const Node* node, bool isLeft)
 
 
 
-std::optional<std::map<unsigned char, int>> findOccurancies(std::string const &inpath) {
+std::optional<std::vector<int>> findOccurancies(std::string const &inpath) {
 
 	std::ifstream inf(inpath, std::ios::binary);
 	if (!inf.is_open()) {
@@ -90,18 +90,17 @@ std::optional<std::map<unsigned char, int>> findOccurancies(std::string const &i
 
 	inf.seekg(0, std::ios::beg); //TODO skontrolovat
 
-	std::map<unsigned char, int> occurancies = {};
-	
+	std::vector<int> occuranciesArr(256);
 
 
-	char buffer[4096];
+	char buffer[32768];
 	std::streamsize bufferSize = std::size(buffer);
 	inf.read(buffer, bufferSize);
 	size_t buffi = 0, gc = inf.gcount();
 
 	while (gc > 0) {
 		while (buffi < gc) {
-			occurancies[buffer[buffi]]++;
+			occuranciesArr[static_cast<unsigned char>(buffer[buffi])]++;
 			buffi++;
 		}
 		inf.read(buffer, bufferSize);
@@ -109,16 +108,8 @@ std::optional<std::map<unsigned char, int>> findOccurancies(std::string const &i
 		buffi = 0;
 	}
 
-	/*char c;
-	while (inf.read(&c, 1)) {
-
-		occurancies[c]++;
-	}*/
-
-
 	inf.close();
-	return occurancies;
-
+	return occuranciesArr;
 }
 
 void getCodes(const Node *tree, std::map<unsigned char, std::string> *codes,std::string cd) {
@@ -148,25 +139,22 @@ void printCodes(std::map<unsigned char, std::string> codes) {
 	}
 }
 
-uint64_t calcBitLength(std::vector<std::string> codes, std::map<unsigned char, int> occur) {
+uint64_t calcBitLength(std::vector<std::string> codes, std::vector<int> occur) {
 	uint64_t sum = 0;
 	size_t len = codes.size();
 
 	for (uint16_t i = 0; i < len; i++  )
 	{
-		sum += codes[i].size() * occur[static_cast<unsigned char>(i)];
+		sum += codes[i].size() * occur[i];
 	}
 
 	return sum;
-
 }
 
 std::vector< char> codeToBin(std::string strcode) {
 
 	std::vector< char> bytes;
 	char byte = 0;
-
-
 	
 	for (size_t i = 0; i < strcode.length(); ) {
 		byte = 0;
@@ -179,7 +167,7 @@ std::vector< char> codeToBin(std::string strcode) {
 	return bytes;
 }
 
-bool compressFile( std::map<unsigned char, std::string> codes, std::vector< std::string> codesArr, std::map<unsigned char, int> occur, std::string const &inpath, std::string const &outpath) {
+bool compressFile( std::vector< std::string> codesArr, std::vector<int> occur, std::string const &inpath, std::string const &outpath) {
 	std::ofstream outfile(outpath, std::ios::binary);
 	
 
@@ -235,8 +223,6 @@ bool compressFile( std::map<unsigned char, std::string> codes, std::vector< std:
 	uint16_t bi = 0;
 	uint8_t  byte = 0;
 
-	//std::string code = "";
-	//code.reserve(256);
 	
 	// writing compressed code
 	while (gc > 0) {
@@ -279,41 +265,7 @@ int main(int argc, char* argv[])
 	if (!arguments.setArguments(argc, argv))
 		return EXIT_FAILURE;
 
-	////test
-	/*
-	std::ofstream outfile(arguments.outputPath, std::ios::out |std::ios::binary);
-	uint64_t buffer;
-	//std::streamsize bufferSize = std::size(buffer);
-	buffer = std::stoull("1111111101110001011100010111000101110000000000000000000000000001", nullptr, 2);
-	//buffer[0] |= 1 << (sizeof(buffer[0])*8 - 1);
-	//buffer[0] |= 7 << (sizeof(buffer[0]) - 10);
-	outfile.write(reinterpret_cast<char*>(&buffer), sizeof(buffer));
-	outfile.close();
-
-	size_t size = 16;
-	std::string s = "111101100", tms;
-	//std::bitset<128> bits = {0};
-	for (size_t i = 0; i < 14000000; i++) {
-		s += "1100";
-		if (s.size() >= size) {
-			std::bitset<8192> bits(s.substr(0, size));
-			outfile.write(reinterpret_cast<char*>(&bits), size /8);
-			s.erase(0, size);
-			outfile.close();
-		}
-	}
-	std::bitset<8> bits(s.substr(0, 8));
-	outfile.write(reinterpret_cast<char*>(&bits), 1);
-	//std::cout<< sizeof(buffer[0]) << " " << (15 << 4) << " " << (15 << 5) << " " << (15 << 6);
-	//
-
-
-	outfile.close();
-	*/
-	//-------
-
-
- 	std::optional<std::map<unsigned char, int>> optoccur = findOccurancies(arguments.inputPath);
+ 	std::optional<std::vector<int>> optoccur = findOccurancies(arguments.inputPath);
 	if (!optoccur)
 		return EXIT_FAILURE;
 	auto occurencies = *std::move(optoccur);
@@ -321,10 +273,14 @@ int main(int argc, char* argv[])
 
 	// build tree--------
 	std::priority_queue<Node> pq;
-	for (const auto& [key, value] : occurencies)
+	size_t len = occurencies.size();
+
+	for (uint16_t i = 0; i < len; i++)
 	{
-		pq.push(Node{ value, key });
+		if (occurencies[i] == 0) continue;
+		pq.push(Node{ occurencies[i], static_cast<unsigned char>(i) });
 	}
+
 
 	Node x;
 	
@@ -352,8 +308,6 @@ int main(int argc, char* argv[])
 	std::map<unsigned char, std::string> codes;
 	getCodes( &tree, &codes, "");
 
-
-	//------test array
 	std::vector<std::string> codesArr(256);
 	for (const auto& [key, value] : codes) {
 
@@ -362,11 +316,10 @@ int main(int argc, char* argv[])
 
 
 
-
 	if (arguments.mod == "--print")
 		printCodes(codes);
 	else if (arguments.mod == "--compress")
-		if (!compressFile(codes, codesArr, occurencies, arguments.inputPath, arguments.outputPath))
+		if (!compressFile(codesArr, occurencies, arguments.inputPath, arguments.outputPath))
 			return EXIT_FAILURE;
 
 	//std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
