@@ -4,7 +4,6 @@
 #include <optional>
 #include <string>
 #include <queue>
-//#include <map>
 
 
 struct Node
@@ -33,15 +32,14 @@ public:
 
 	// TODO mozno osetrit subor uz tu (vystupny sa zatial kontroluje len ak je --compress)
 	bool setArguments(int argc, char* argv[]) {
-		if (argc != 4)
-			return false;
 
 		mod = argv[1];
-		if (mod != "--print" && mod != "--compress" && mod != "--decompress")
+		if (!((mod == "--print" && argc == 3) || (mod == "--compress" && argc == 4)) && mod != "--decompress")
 			return false;
 
 		inputPath = argv[2];
-		outputPath = argv[3];
+		if(argc == 4)
+			outputPath = argv[3];
 		return true;
 	}
 };
