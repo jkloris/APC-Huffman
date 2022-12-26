@@ -165,11 +165,12 @@ std::vector< char> codeToBin(std::string strcode) {
 	return bytes;
 }
 
+
 bool compressFile( std::vector< std::string> codesArr, std::vector<int> occur, std::string const &inpath, std::string const &outpath) {
 	std::ofstream outfile(outpath, std::ios::binary);
 	
 
-	std::cout << "compress\n";
+	//std::cout << "compress\n";
 
 	uint64_t size = calcBitLength(codesArr, occur);
 	outfile.write(reinterpret_cast<char*>(&size), sizeof(size));
@@ -281,7 +282,9 @@ int main(int argc, char* argv[])
 
 
 	Node x;
-	
+	std::vector<Node*> allocatedNodes;
+
+
 	while (pq.size() > 1) {
 		Node *l = new Node();
 		*l = pq.top();
@@ -291,6 +294,9 @@ int main(int argc, char* argv[])
 		*r = pq.top();
 		pq.pop();
 		
+		allocatedNodes.push_back(r);
+		allocatedNodes.push_back(l);
+
 		x.value = l->value + r->value;
 		x.left = l;
 		x.right = r;
@@ -305,6 +311,12 @@ int main(int argc, char* argv[])
 
 	std::map<unsigned char, std::string> codes;
 	getCodes( &tree, &codes, "");
+
+	//free tree
+	for (auto it : allocatedNodes) {
+		delete it;
+	}
+
 
 	std::vector<std::string> codesArr(256);
 	for (const auto& [key, value] : codes) {
