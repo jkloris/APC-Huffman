@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 #include <queue>
-#include <unordered_map>
+//#include <map>
 
 
 struct Node
@@ -31,7 +31,7 @@ public:
 	std::string outputPath;
 	
 
-	// TODO mozno osetrit subor uz tu (vysputny sa zatial kontroluje len ak je --compress)
+	// TODO mozno osetrit subor uz tu (vystupny sa zatial kontroluje len ak je --compress)
 	bool setArguments(int argc, char* argv[]) {
 		if (argc != 4)
 			return false;
@@ -87,7 +87,8 @@ std::optional<std::map<unsigned char, int>> findOccurancies(std::string const &i
 		std::cout << "Empty file\n";
 		return {};
 	}
-	inf.seekg(0, 0);
+
+	inf.seekg(0, std::ios::beg); //TODO skontrolovat
 
 	std::map<unsigned char, int> occurancies = {};
 	
@@ -120,7 +121,7 @@ std::optional<std::map<unsigned char, int>> findOccurancies(std::string const &i
 
 }
 
-void getCodes(const Node *tree, std::unordered_map<unsigned char, std::string> *codes,std::string cd) {
+void getCodes(const Node *tree, std::map<unsigned char, std::string> *codes,std::string cd) {
 	if (tree->left == NULL || tree->right == NULL) {
 		codes->insert(std::pair<unsigned char, std::string>(tree->c, cd));
 		return;
@@ -137,7 +138,8 @@ void getCodes(const Node *tree, std::unordered_map<unsigned char, std::string> *
 }
 
 
-void printCodes(std::unordered_map<unsigned char, std::string> codes) {
+
+void printCodes(std::map<unsigned char, std::string> codes) {
 
 	for (const auto& [key, value] : codes)
 	{
@@ -146,12 +148,13 @@ void printCodes(std::unordered_map<unsigned char, std::string> codes) {
 	}
 }
 
-uint64_t calcBitLength(std::unordered_map<unsigned char, std::string> codes, std::map<unsigned char, int> occur) {
+uint64_t calcBitLength(std::vector<std::string> codes, std::map<unsigned char, int> occur) {
 	uint64_t sum = 0;
+	size_t len = codes.size();
 
-	for (const auto& [key, value] : codes)
+	for (uint16_t i = 0; i < len; i++  )
 	{
-		sum += (value.size()) * occur[key];
+		sum += codes[i].size() * occur[static_cast<unsigned char>(i)];
 	}
 
 	return sum;
@@ -176,11 +179,13 @@ std::vector< char> codeToBin(std::string strcode) {
 	return bytes;
 }
 
-bool compressFile( std::unordered_map<unsigned char, std::string> &codes, std::map<unsigned char, int> occur, std::string const &inpath, std::string const &outpath) {
+bool compressFile( std::map<unsigned char, std::string> codes, std::vector< std::string> codesArr, std::map<unsigned char, int> occur, std::string const &inpath, std::string const &outpath) {
 	std::ofstream outfile(outpath, std::ios::binary);
+	
 
+	std::cout << "compress\n";
 
-	uint64_t size = calcBitLength(codes, occur);
+	uint64_t size = calcBitLength(codesArr, occur);
 	outfile.write(reinterpret_cast<char*>(&size), sizeof(size));
 
 	if (!outfile.is_open())
@@ -189,18 +194,22 @@ bool compressFile( std::unordered_map<unsigned char, std::string> &codes, std::m
 	char zero = 0;
 	char nonzeroSize = 1;
 	std::vector< char> bytes = {  };
+
+	std::string code = "";
+	code.reserve(256);
 	
-	std::cout << "codes\n";
-	
+	// writing -> code length | code 
 	for (unsigned char c = 0; ; c++) {
-		if (codes[c].length() == 0) {
+		code = codesArr[c];
+			
+		if (code.length() == 0) {
 			outfile.write(reinterpret_cast<char*>(&zero), sizeof(c));
 		}
 		else {
-			nonzeroSize = static_cast<char> (codes[c].length());
+			nonzeroSize = static_cast<char> (code.length());
 			outfile.write(&nonzeroSize, sizeof(c));
 
-			bytes = codeToBin(codes[c]);
+			bytes = codeToBin(code);
 			for (char b : bytes) {
 				outfile.write(&b, sizeof(b));
 			}
@@ -215,11 +224,10 @@ bool compressFile( std::unordered_map<unsigned char, std::string> &codes, std::m
 		return  false;
 	}
 
-	std::cout << "compress\n" << codes.size();;
 
 	
 
-	char buffer[8192];
+	char buffer[32768];
 	std::streamsize bufferSize = std::size(buffer);
 	infile.read(buffer, bufferSize);
 	size_t buffi = 0, gc = infile.gcount(); 
@@ -227,15 +235,15 @@ bool compressFile( std::unordered_map<unsigned char, std::string> &codes, std::m
 	uint16_t bi = 0;
 	uint8_t  byte = 0;
 
-	std::string code = "";
-	code.reserve(256);
+	//std::string code = "";
+	//code.reserve(256);
 	
-
+	// writing compressed code
 	while (gc > 0) {
 		while (buffi < gc) {
 
-
-			code = codes[buffer[buffi]]; 
+			code = codesArr[static_cast<unsigned char>(buffer[buffi])];
+			//code = codes[buffer[buffi]];  //slowest part
 			
 			for (auto c : code) {
 				byte |= (c - '0') << (7 - bi);
@@ -255,7 +263,6 @@ bool compressFile( std::unordered_map<unsigned char, std::string> &codes, std::m
 		gc = infile.gcount();
 		buffi = 0;
 	}
-
 	outfile.write(reinterpret_cast<char*>(&byte), sizeof(char));
 
 
@@ -333,7 +340,7 @@ int main(int argc, char* argv[])
 		x.value = l->value + r->value;
 		x.left = l;
 		x.right = r;
-		x.c = NULL;
+		x.c = '\0';
 
 		pq.push(x);		 
 	}
@@ -342,14 +349,24 @@ int main(int argc, char* argv[])
 	//-------------- TODO free
 	//printBT("", &tree, false);
 
-	std::unordered_map<unsigned char, std::string> codes;
+	std::map<unsigned char, std::string> codes;
 	getCodes( &tree, &codes, "");
+
+
+	//------test array
+	std::vector<std::string> codesArr(256);
+	for (const auto& [key, value] : codes) {
+
+		codesArr[key] = value;
+	}
+
+
 
 
 	if (arguments.mod == "--print")
 		printCodes(codes);
 	else if (arguments.mod == "--compress")
-		if (!compressFile(codes, occurencies, arguments.inputPath, arguments.outputPath))
+		if (!compressFile(codes, codesArr, occurencies, arguments.inputPath, arguments.outputPath))
 			return EXIT_FAILURE;
 
 	//std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
