@@ -30,7 +30,7 @@ public:
 	std::string outputPath;
 	
 
-	// TODO mozno osetrit subor uz tu (vystupny sa zatial kontroluje len ak je --compress)
+	
 	bool setArguments(int argc, char* argv[]) {
 
 		mod = argv[1];
@@ -248,7 +248,8 @@ bool compressFile( std::vector< std::string> codesArr, std::vector<int> occur, s
 		gc = infile.gcount();
 		buffi = 0;
 	}
-	outfile.write(reinterpret_cast<char*>(&byte), sizeof(char));
+	if(bi > 0)
+		outfile.write(reinterpret_cast<char*>(&byte), sizeof(char));
 
 
 	infile.close();
@@ -332,7 +333,5 @@ int main(int argc, char* argv[])
 		if (!compressFile(codesArr, occurencies, arguments.inputPath, arguments.outputPath))
 			return EXIT_FAILURE;
 
-	//std::cout << "Size = " << calcBitLength(codes, occurencies) << "\n";
 	return 0;
-
 }
