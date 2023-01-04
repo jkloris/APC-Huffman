@@ -46,43 +46,20 @@ public:
 
 
 
-//_____________________________tmp test print
-void printBT(const std::string& prefix, const Node* node, bool isLeft)
-{
-	if (node != nullptr)
-	{
-		std::cout << prefix;
-
-		std::cout << (isLeft ? "|--" : "|--");
-
-		// print the value of the node
-		std::cout << node->value << std::endl;
-
-		// enter the next tree level - left and right branch
-		printBT(prefix + (isLeft ? "|   " : "    "), node->left, true);
-		printBT(prefix + (isLeft ? "|   " : "    "), node->right, false);
-	}
-}
-
-
-
-//________________________
-
-
 
 
 std::optional<std::vector<int>> findOccurancies(std::string const &inpath) {
 
 	std::ifstream inf(inpath, std::ios::binary);
 	if (!inf.is_open()) {
-		std::cout << "Unable to open file\n";
+		//std::cout << "Unable to open file\n";
 		return  {};
 	}
 
 	std::streampos currPos = inf.tellg();
 	inf.seekg(0, std::ios::end);
 	if (inf.tellg() == currPos) {
-		std::cout << "Empty file\n";
+		//std::cout << "Empty file\n";
 		return {};
 	}
 
@@ -207,7 +184,7 @@ bool compressFile( std::vector< std::string> codesArr, std::vector<int> occur, s
 
 	std::ifstream infile(inpath, std::ios::binary);
 	if (!infile.is_open()) {
-		std::cout << "Unable to open file\n"; // TODO del
+		//std::cout << "Unable to open file\n"; // TODO del
 		return  false;
 	}
 
@@ -307,8 +284,6 @@ int main(int argc, char* argv[])
 	}
 
 	Node tree = pq.top();
-	//-------------- TODO free
-	//printBT("", &tree, false);
 
 	std::map<unsigned char, std::string> codes;
 	getCodes( &tree, &codes, "");
